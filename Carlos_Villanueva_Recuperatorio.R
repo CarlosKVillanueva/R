@@ -1,37 +1,32 @@
+# Paso 1: Cargar el dataframe
+url <- "https://raw.githubusercontent.com/CarlosKVillanueva/R/master/mushrooms.csv"
+df <- read.csv(url, stringsAsFactors = TRUE)
+
+# Paso 2: Ignorar columnas con valores iguales
+df <- df[, !sapply(df, function(x) all(x == x[1]))]
+
+# Paso 3: Selección aleatoria de 15 atributos para predecir la comestibilidad
+set.seed(123)
+random_columns <- sample(names(df), 15)
+df_subset <- df[random_columns]
+
+# Paso 4: Conjunto de testing
+set.seed(456)
+testing_rows <- sample(1:nrow(df), 55)
+df_testing <- df_subset[testing_rows, ]
+
+# Paso 5: Conjunto de entrenamiento
+df_training <- df_subset[-testing_rows, ]
+
+# Paso 6: Contar predicciones incorrectas
 library(rpart)
-library(readr)
+# Verificar el nombre exacto de la columna objetivo en tu dataframe
+target_column <- "type"
 
-# Cargar el conjunto de datos desde la URL
-df <-  read_csv("C:/Users/carlo/OneDrive/Escritorio/Recuperatorio_R/mushrooms.csv")
-#View(mushrooms)
+model <- rpart(as.formula(paste(target_column, "~ .")), data = df_training)
+predicted <- predict(model, newdata = df_testing, type = "class")
+actual <- df[testing_rows, target_column]
+incorrect_predictions <- sum(predicted != actual)
 
-
-# Ignorar las columnas que tienen valores todos iguales
-df <- df[, sapply(df, function(x) length(unique(x))) > 1]
-
-# Seleccionar 15 atributos al azar para predecir la comestibilidad
-set.seed(42)
-random_features <- sample(colnames(df)[-1], 15)
-selected_df <- df[, c("type", random_features)]
-
-# Dividir el conjunto de datos en entrenamiento y prueba
-set.seed(42)
-test_indices <- sample(1:nrow(selected_df), 55)
-train_df <- selected_df[-test_indices, ]
-test_df <- selected_df[test_indices, ]
-
-# Construir el árbol de decisión
-control <- rpart.control(cp = 0.001)
-tree <- rpart(target ~ ., data = train_df, method = "class", control = control)
-
-# Realizar predicciones en el conjunto de prueba
-predictions <- predict(tree, newdata = test_df, type = "type")
-
-# Calcular la precisión del modelo
-accuracy <- sum(predictions == test_df$type) / nrow(test_df)
-print(paste("Precisión del modelo:", accuracy))
-
-# Contar las predicciones incorrectas sobre la comestibilidad de los hongos
-incorrect_predictions <- test_df[predictions != test_df$class, ]
-incorrect_count <- nrow(incorrect_predictions)
-print(paste("Número de predicciones incorrectas:", incorrect_count))
+# Resultado
+incorrect_predictions
